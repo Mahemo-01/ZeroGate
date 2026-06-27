@@ -2,6 +2,8 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
+from pydantic import BaseModel
+from firewall import network_guard
 import database
 import models
 
@@ -27,6 +29,9 @@ def get_db():
       yield db
    finally:
       db.close()
+
+class QuarantineRequest(BaseModel):
+   mac_address: str
 
 @app.get("/")
 def read_root():
@@ -71,3 +76,24 @@ def get_alerts(db: Session = Depends(get_db)):
          }
       })
    return result
+
+@app.post("/api/register")
+def register_guest(mac_address: str, email: str):
+   # 1. Save to SQLite database (Logic coming soon)
+   
+   # 2. Open the Linux Firewall
+   network_guard.grant_access(mac_address)
+   return {"status": "success", "message": f"Internet access granted for {email}"}
+
+@app.post("/api/quarantine")
+def trigger_quarantine(req: QuarantineRequest, db: Session = Depends(get_db)):
+   device = db.query(models.ConnectedDevice).filter(models.ConnectedDevice.mac_address == req.mac_address).first()
+   
+   if not device: raise HTTPException(status_code = 404, detail = "Device not found")
+      
+   # 2. Slam the Linux firewall shut
+   network_guard.quarantine_device(req.mac_address)
+   
+   # 3. (Optional) Update the device status in the database to show it is blocked
+   
+   return {"status": "quarantined", "mac": req.mac_address}
