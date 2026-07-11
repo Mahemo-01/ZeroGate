@@ -43,6 +43,14 @@ yarn-error.log*
 next-env.d.ts
 
 # python venv
-backend/venv/
+backend/.venv/
 __pycache__/
 *.pyc
+ai_orchestration/.venv/
+
+# antigravity state files
+.agy/
+
+# local databases
+*.db
+*.sqlite3
