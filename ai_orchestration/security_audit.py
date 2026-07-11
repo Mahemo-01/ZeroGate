@@ -2,7 +2,6 @@ import asyncio
 import os
 from dotenv import load_dotenv
 from google.antigravity import Agent, LocalAgentConfig
-# 1. Import the policy override tools
 from google.antigravity.hooks.policy import allow, deny
 
 load_dotenv()
