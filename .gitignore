@@ -46,6 +46,7 @@ next-env.d.ts
 backend/.venv/
 __pycache__/
 *.pyc
+ai_orchestration/
 ai_orchestration/.venv/
 
 # antigravity state files
