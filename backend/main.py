@@ -25,10 +25,8 @@ app.add_middleware(
 # and safely closes it when the request is finished, preventing memory leaks.
 def get_db():
    db = database.SessionLocal()
-   try:
-      yield db
-   finally:
-      db.close()
+   try: yield db
+   finally: db.close()
 
 class QuarantineRequest(BaseModel):
    mac_address: str
