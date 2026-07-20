@@ -48,6 +48,7 @@ __pycache__/
 *.pyc
 ai_orchestration/
 ai_orchestration/.venv/
+mock_data/
 
 # antigravity state files
 .agy/
