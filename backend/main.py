@@ -5,8 +5,10 @@ from datetime import datetime, timedelta
 from typing import List
 from pydantic import BaseModel
 from firewall import network_guard
-import database
-import models
+import database, models
+from database import engine
+
+models.Base.metadata.create_all(bind = engine)
 
 app = FastAPI(title = "ZeroGate Core API", version = "1.0.0")
 
@@ -88,6 +90,7 @@ def register_guest(req: RegisterRequest, db: Session = Depends(get_db)):
    if not device:
       device = models.ConnectedDevice(
          mac_address = req.mac_address,
+         ip_address = "192.168.4.10",     # hardcoded for now
          email = req.email,
          is_authenticated = True,
          expiration_time = expiration_time 
@@ -101,7 +104,7 @@ def register_guest(req: RegisterRequest, db: Session = Depends(get_db)):
    db.commit()
    db.refresh(device)
 
-   # Open the Linux Firewall
+   # Linux Firewall
    network_guard.grant_access(req.mac_address)
    return {"status": "success", "message": f"Internet access granted for {req.email}", "expires_at": expiration_time.isoformat()}
 

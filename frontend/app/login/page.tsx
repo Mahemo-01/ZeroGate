@@ -39,14 +39,14 @@ export default function CaptivePortal() {
     <main className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4">
       <Card className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-8">
 
-        <CardHeader className="text-center mb-8">
+        <CardHeader className="text-center">
           <CardTitle className="text-3xl font-black text-emerald-400 tracking-tight mb-1">ZeroGate</CardTitle>
           <CardDescription className="text-gray-400 text-sm font-medium">Secure Guest Network Authentication</CardDescription>
         </CardHeader>
 
         <CardContent>
           {status === "success" ? (
-            <div className="text-center py-4">
+            <div className="text-center">
               <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/50">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -56,7 +56,7 @@ export default function CaptivePortal() {
               <p className="text-gray-400 text-sm">Your device is authorized. You now have 2 hours of internet access.</p>
             </div>
           ) : (
-            <form onSubmit={handleConnect} className="space-y-4">
+            <form onSubmit={handleConnect} className="space-y-4 mt-2">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">Email Address</label>
                 <Input
