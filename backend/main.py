@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
 from typing import List
 from pydantic import BaseModel
 from firewall import network_guard
@@ -25,13 +26,15 @@ app.add_middleware(
 # and safely closes it when the request is finished, preventing memory leaks.
 def get_db():
    db = database.SessionLocal()
-   try:
-      yield db
-   finally:
-      db.close()
+   try: yield db
+   finally: db.close()
 
 class QuarantineRequest(BaseModel):
    mac_address: str
+
+class RegisterRequest(BaseModel):
+   mac_address: str
+   email: str
 
 @app.get("/")
 def read_root():
@@ -78,12 +81,29 @@ def get_alerts(db: Session = Depends(get_db)):
    return result
 
 @app.post("/api/register")
-def register_guest(mac_address: str, email: str):
-   # 1. Save to SQLite database (Logic coming soon)
-   
-   # 2. Open the Linux Firewall
-   network_guard.grant_access(mac_address)
-   return {"status": "success", "message": f"Internet access granted for {email}"}
+def register_guest(req: RegisterRequest, db: Session = Depends(get_db)):
+   expiration_time = datetime.now() + timedelta(hours = 2)
+   device = db.query(models.ConnectedDevice).filter(models.ConnectedDevice.mac_address == req.mac_address).first()
+
+   if not device:
+      device = models.ConnectedDevice(
+         mac_address = req.mac_address,
+         email = req.email,
+         is_authenticated = True,
+         expiration_time = expiration_time 
+      )
+      db.add(device)
+   else:
+      device.email = req.email
+      device.is_authenticated = True
+      device.expiration_time = expiration_time
+
+   db.commit()
+   db.refresh(device)
+
+   # Open the Linux Firewall
+   network_guard.grant_access(req.mac_address)
+   return {"status": "success", "message": f"Internet access granted for {req.email}", "expires_at": expiration_time.isoformat()}
 
 @app.post("/api/quarantine")
 def trigger_quarantine(req: QuarantineRequest, db: Session = Depends(get_db)):
