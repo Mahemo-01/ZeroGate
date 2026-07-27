@@ -145,17 +145,25 @@ export default function DevicesView() {
       try {
         const response = await fetch("http://127.0.0.1:8000/api/devices");
         const json = await response.json();
-        if (json.status === "success") {
-          setData(json.data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch devices:", error);
-      }
+        if (json.status === "success") { setData(json.data); }
+      } catch (error) { console.error("Failed to fetch devices:", error); }
     };
 
     fetchDevices();
-    const interval = setInterval(fetchDevices, 10000);
-    return () => clearInterval(interval);
+    const ws = new WebSocket("ws://127.0.0.1:8000/ws/devices");
+
+    ws.onopen = () => { console.log("WebSocket Connected to ZeroGate Network"); };
+
+    ws.onmessage = (event) => {
+      try {
+        const incomingData = JSON.parse(event.data);
+        if (incomingData.status === "success") { setData(incomingData.data); }
+      } catch (error) { console.error("Error parsing WebSocket message:", error); }
+    };
+
+    ws.onclose = () => { console.log("WebSocket Disconnected"); };
+
+    return () => { ws.close(); };
   }, []);
 
   const table = useReactTable({
