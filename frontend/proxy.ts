@@ -24,7 +24,10 @@ export function proxy(request: NextRequest) {
   return new Response(null, {
     status: 302,
     headers: {
-      'Location': 'http://192.168.4.1/'
+      'Location': 'http://192.168.4.1/',
+      'Content-Length': '0',
+      'Connection': 'close',
+      'Cache-Control': 'no-cache, no-store, must-revalidate'
     }
   });
 }
