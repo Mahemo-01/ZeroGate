@@ -22,10 +22,12 @@ export function proxy(request: NextRequest) {
   }
 
   const redirectUrl = request.nextUrl.clone();
+  redirectUrl.protocol = 'http:';
+  redirectUrl.hostname = '192.168.4.1';
   redirectUrl.pathname = '/';
   redirectUrl.port = '';
 
-  return NextResponse.redirect(new URL('/', request.url));
+  return NextResponse.redirect(redirectUrl, { status: 302 });
 }
 
 export const config = {
