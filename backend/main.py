@@ -36,6 +36,10 @@ class RegisterRequest(BaseModel):
    mac_address: str
    email: str
 
+class GuestRegistration(BaseModel):
+   mac_address: str
+   email: str
+
 # --- WebSocket Manager ---
 class ConnectionManager:
    def __init__(self):
@@ -87,7 +91,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.get("/api/devices")
 def get_devices(db: Session = Depends(get_db)):
-   try: get_all_devices_payload(db)
+   try: return get_all_devices_payload(db)
    except Exception as e:
       raise HTTPException(status_code = 500, detail = f"Database error: {str(e)}")
 
