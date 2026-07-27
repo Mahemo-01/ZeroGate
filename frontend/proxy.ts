@@ -21,7 +21,12 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  return NextResponse.redirect(new URL('http://192.168.4.1/'), { status: 302 });
+  return new Response(null, {
+    status: 302,
+    headers: {
+      'Location': 'http://192.168.4.1/'
+    }
+  });
 }
 
 export const config = {
