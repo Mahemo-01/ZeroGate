@@ -143,14 +143,14 @@ export default function DevicesView() {
   useEffect(() => {
     const fetchDevices = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8000/api/devices");
+        const response = await fetch("http://192.168.4.1:8000/api/devices");
         const json = await response.json();
         if (json.status === "success") { setData(json.data); }
       } catch (error) { console.error("Failed to fetch devices:", error); }
     };
 
     fetchDevices();
-    const ws = new WebSocket("ws://127.0.0.1:8000/ws/devices");
+    const ws = new WebSocket("ws://192.168.4.1:8000/ws/devices");
 
     ws.onopen = () => { console.log("WebSocket Connected to ZeroGate Network"); };
 
