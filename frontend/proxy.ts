@@ -21,13 +21,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const redirectUrl = request.nextUrl.clone();
-  redirectUrl.protocol = 'http:';
-  redirectUrl.hostname = '192.168.4.1';
-  redirectUrl.pathname = '/';
-  redirectUrl.port = '';
-
-  return NextResponse.redirect(redirectUrl, { status: 302 });
+  return NextResponse.redirect(new URL('http://192.168.4.1/'), { status: 302 });
 }
 
 export const config = {
