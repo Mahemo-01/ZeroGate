@@ -141,17 +141,19 @@ export default function DevicesView() {
   const [rowSelection, setRowSelection] = useState({});
 
   useEffect(() => {
+    const host = window.location.hostname;
+
     const fetchDevices = async () => {
       try {
-        const response = await fetch("http://192.168.4.1:8000/api/devices");
+        const response = await fetch(`http://${host}:8000/api/devices`);
         const json = await response.json();
         if (json.status === "success") { setData(json.data); }
       } catch (error) { console.error("Failed to fetch devices:", error); }
     };
 
     fetchDevices();
-    const ws = new WebSocket("ws://192.168.4.1:8000/ws/devices");
 
+    const ws = new WebSocket(`ws://${host}:8000/ws/devices`);
     ws.onopen = () => { console.log("WebSocket Connected to ZeroGate Network"); };
 
     ws.onmessage = (event) => {
