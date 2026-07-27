@@ -16,7 +16,8 @@ export default function CaptivePortal() {
     setStatus("loading");
 
     try {
-      const response = await fetch("http://192.168.4.1:8000/api/register", {
+      const host = window.location.hostname;
+      const response = await fetch(`http://${host}:8000/api/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
