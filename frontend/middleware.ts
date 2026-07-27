@@ -12,13 +12,20 @@ export function middleware(request: NextRequest) {
       const adminLoginUrl = new URL('/admin', request.url);
       return NextResponse.redirect(adminLoginUrl);
     }
+
+    return NextResponse.next();
   }
 
-  return NextResponse.next();
+
+  if (path === '/' || path === '/admin' || path.startsWith('/api')) {
+    return NextResponse.next();
+  }
+
+  return NextResponse.redirect(new URL('/', request.url));
 }
 
 export const config = {
   matcher: [
-    '/dashboard/:path*',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };
