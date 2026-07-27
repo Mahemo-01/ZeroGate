@@ -44,21 +44,25 @@ def read_root():
 
 @app.get("/api/devices")
 def get_devices(db: Session = Depends(get_db)):
-   devices = db.query(models.ConnectedDevice).all()
-   
-   # Format the relational data neatly into JSON
-   result = []
-   for device in devices:
-      result.append({
-         "id": device.id,
-         "mac_address": device.mac_address,
-         "ip_address": device.ip_address,
-         "email": device.email,
-         "custom_label": device.custom_label,
-         "is_authenticated": device.is_authenticated,
-         "first_seen": device.first_seen.isoformat() if device.first_seen else None
-      })
-   return result
+   try:
+      devices = db.query(models.ConnectedDevice).all()
+      result = []
+      
+      # Data -> JSON
+      for device in devices:
+         result.append({
+            "id": device.id,
+            "mac_address": device.mac_address,
+            "ip_address": device.ip_address,
+            "email": device.email,
+            "custom_label": device.custom_label,
+            "is_authenticated": device.is_authenticated,
+            "first_seen": device.first_seen.isoformat() if device.first_seen else None,
+            "expiration_time": device.expiration_time.isoformat() if device.expiration_time else None
+         })
+      return {"status": "success", "data": result}
+   except Exception as e:
+      raise HTTPException(status_code = 500, detail = f"Database error: {str(e)}")
 
 @app.get("/api/alerts")
 def get_alerts(db: Session = Depends(get_db)):
