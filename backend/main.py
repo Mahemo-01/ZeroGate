@@ -4,14 +4,45 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import List
 from pydantic import BaseModel
-import json
-import os
+from contextlib import asynccontextmanager
+import json, os, asyncio
 from firewall import network_guard
 import database, models
 from database import engine
 
-models.Base.metadata.create_all(bind = engine)
+async def session_executioner():
+   """Revokes access to expired sessions"""
+   while True:
+      await asyncio.sleep(60)
+      try:
+         db = database.SessionLocal()
+         now = datetime.now()
+         
+         expired_devices = db.query(models.ConnectedDevice).filter(
+            models.ConnectedDevice.is_authenticated == True,
+            models.ConnectedDevice.expiration_time <= now
+         ).all()
 
+         if expired_devices:
+            for device in expired_devices:
+               print(f"- [TASK]: Time expired for {device.mac_address}. Revoking...")
+               network_guard.revoke_access(device.mac_address)
+               device.is_authenticated = False
+            
+            db.commit()
+            await manager.broadcast(get_all_devices_payload(db))
+         
+         db.close()
+      except Exception as e: print(f"⚠️ [TASK]: Executioner error: {e}")
+
+# --- LIFESPAN MANAGER ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+   task = asyncio.create_task(session_executioner())
+   yield
+   task.cancel()
+
+models.Base.metadata.create_all(bind = engine)
 app = FastAPI(title = "ZeroGate Core API", version = "1.0.0")
 
 # Enable CORS
@@ -30,7 +61,7 @@ def get_db():
    finally: db.close()
 
 # Models
-class QuarantineRequest(BaseModel):
+class ActionRequest(BaseModel):
    mac_address: str
 
 class RegisterRequest(BaseModel):
@@ -51,10 +82,10 @@ def get_mac_from_ip(ip: str) -> str:
                if line.startswith(ip + " "):
                   parts = line.split()
                   if len(parts) >= 4: return parts[3].upper()
-   except Exception as e: print(f"Error leyendo ARP: {e}")
+   except Exception as e: print(f"⚠️ [SYSTEM]: ARP read error: {e}")
    return None
 
-# --- WebSocket Manager ---
+# --- WEBSOCKET MANAGER ---
 class ConnectionManager:
    def __init__(self):
       self.active_connections: List[WebSocket] = []
@@ -89,7 +120,7 @@ def get_all_devices_payload(db: Session):
       })
    return {"status": "success", "data": result}
 
-# Routes
+# --- ROUTES ---
 @app.get("/")
 def read_root():
    return {"status": "online", "appliance": "ZeroGate", "version": "1.0.0"}
@@ -163,10 +194,22 @@ async def register_guest(req: RegisterRequest, request: Request, db: Session = D
    await manager.broadcast(get_all_devices_payload(db))
    return {"status": "success", "message": f"Internet access granted for {req.email}", "mac": client_mac, "expires_at": expiration_time.isoformat()}
 
-@app.post("/api/quarantine")
-async def trigger_quarantine(req: QuarantineRequest, db: Session = Depends(get_db)):
+@app.post("/api/revoke")
+async def trigger_revoke(req: ActionRequest, db: Session = Depends(get_db)):
    device = db.query(models.ConnectedDevice).filter(models.ConnectedDevice.mac_address == req.mac_address).first()
+   if not device: raise HTTPException(status_code = 404, detail = "Device not found")
+      
+   network_guard.revoke_access(req.mac_address) 
+   device.is_authenticated = False
+   device.expiration_time = datetime.now() - timedelta(minutes = 1) 
+   db.commit()
    
+   await manager.broadcast(get_all_devices_payload(db))
+   return {"status": "revoked", "mac": req.mac_address}
+
+@app.post("/api/quarantine")
+async def trigger_quarantine(req: ActionRequest, db: Session = Depends(get_db)):
+   device = db.query(models.ConnectedDevice).filter(models.ConnectedDevice.mac_address == req.mac_address).first()
    if not device: raise HTTPException(status_code = 404, detail = "Device not found")
       
    network_guard.quarantine_device(req.mac_address)
