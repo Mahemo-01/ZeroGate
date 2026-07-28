@@ -9,8 +9,6 @@ export default function CaptivePortal() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
-  const mockMacAddress = "F1:E2:D3:C4:B5:A6";
-
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("loading");
@@ -21,7 +19,6 @@ export default function CaptivePortal() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mac_address: mockMacAddress,
           email: email
         }),
       });

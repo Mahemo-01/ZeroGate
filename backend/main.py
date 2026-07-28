@@ -1,10 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import List
 from pydantic import BaseModel
 import json
+import os
 from firewall import network_guard
 import database, models
 from database import engine
@@ -33,12 +34,25 @@ class QuarantineRequest(BaseModel):
    mac_address: str
 
 class RegisterRequest(BaseModel):
-   mac_address: str
    email: str
 
 class GuestRegistration(BaseModel):
    mac_address: str
    email: str
+
+def get_mac_from_ip(ip: str) -> str:
+   """Lee la tabla ARP de Linux para encontrar la MAC asociada a una IP"""
+   if ip == "127.0.0.1": return "00:00:00:00:00:00"   # Bypass for local host - No ARP table
+
+   try:
+      if os.path.exists("/proc/net/arp"):
+         with open("/proc/net/arp", "r") as f:
+            for line in f:
+               if line.startswith(ip + " "):
+                  parts = line.split()
+                  if len(parts) >= 4: return parts[3].upper()
+   except Exception as e: print(f"Error leyendo ARP: {e}")
+   return None
 
 # --- WebSocket Manager ---
 class ConnectionManager:
@@ -117,14 +131,20 @@ def get_alerts(db: Session = Depends(get_db)):
    return result
 
 @app.post("/api/register")
-async def register_guest(req: RegisterRequest, db: Session = Depends(get_db)):
+async def register_guest(req: RegisterRequest, request: Request, db: Session = Depends(get_db)):
+   client_ip = request.client.host
+   client_mac = get_mac_from_ip(client_ip)
+
+   if not client_mac:
+      raise HTTPException(status_code = 400, detail = f"Error de red: No se pudo identificar la MAC para la IP {client_ip}")
+
    expiration_time = datetime.now() + timedelta(hours = 2)
-   device = db.query(models.ConnectedDevice).filter(models.ConnectedDevice.mac_address == req.mac_address).first()
+   device = db.query(models.ConnectedDevice).filter(models.ConnectedDevice.mac_address == client_mac).first()
 
    if not device:
       device = models.ConnectedDevice(
-         mac_address = req.mac_address,
-         ip_address = "192.168.4.10",     # hardcoded for now
+         mac_address = client_mac,
+         ip_address = client_ip,
          email = req.email,
          is_authenticated = True,
          expiration_time = expiration_time 
@@ -132,16 +152,16 @@ async def register_guest(req: RegisterRequest, db: Session = Depends(get_db)):
       db.add(device)
    else:
       device.email = req.email
+      device.ip_address = client_ip
       device.is_authenticated = True
       device.expiration_time = expiration_time
 
    db.commit()
    db.refresh(device)
 
-   # Linux Firewall
-   network_guard.grant_access(req.mac_address)
+   network_guard.grant_access(client_mac) # Grant internet via Linux Firewall
    await manager.broadcast(get_all_devices_payload(db))
-   return {"status": "success", "message": f"Internet access granted for {req.email}", "expires_at": expiration_time.isoformat()}
+   return {"status": "success", "message": f"Internet access granted for {req.email}", "mac": client_mac, "expires_at": expiration_time.isoformat()}
 
 @app.post("/api/quarantine")
 async def trigger_quarantine(req: QuarantineRequest, db: Session = Depends(get_db)):
