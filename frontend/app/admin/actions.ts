@@ -11,7 +11,8 @@ export async function authenticateAdmin(formData: FormData) {
     const cookieStore = await cookies();
     cookieStore.set('zerogate_admin_session', 'active', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
+      sameSite: 'lax',
       maxAge: 60 * 60 * 24,
       path: '/',
     });
