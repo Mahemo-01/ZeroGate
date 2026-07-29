@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, ShieldAlert, ShieldX, WifiOff, CheckCircle2 } from "lucide-react";
+import { MoreHorizontal, ShieldAlert, ShieldX, WifiOff, CheckCircle2, ArrowUpDown, Copy, Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +34,31 @@ const formatExpiration = (dateString: string) => {
   }).format(date);
 };
 
+const MacCell = ({ mac }: { mac: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(mac);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
+      <span>{mac}</span>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 text-muted-foreground/60 hover:text-primary hover:cursor-pointer hover:bg-accent"
+        onClick={handleCopy}
+        title="Copy MAC Address"
+      >
+        {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+      </Button>
+    </div>
+  );
+};
+
 export const getColumns = (handleAction: (mac: string, action: 'revoke' | 'block') => void): ColumnDef<Device>[] => [
   {
     id: "select",
@@ -58,7 +84,7 @@ export const getColumns = (handleAction: (mac: string, action: 'revoke' | 'block
   {
     accessorKey: "mac_address",
     header: "MAC Address",
-    cell: ({ row }) => <div className="font-mono text-xs text-muted-foreground">{row.getValue("mac_address")}</div>,
+    cell: ({ row }) => <MacCell mac={row.getValue("mac_address")} />,
   },
   {
     accessorKey: "ip_address",
