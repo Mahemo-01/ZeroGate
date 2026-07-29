@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useDeviceNetwork } from "@/hooks/use-device-network";
 import { ColumnFiltersState, SortingState, VisibilityState, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable, } from "@tanstack/react-table";
 import { ShieldAlert, ShieldCheck, Users, Wifi, Clock } from "lucide-react";
 import { InfoWidget } from "@/components/info-widget";
@@ -10,57 +11,13 @@ import { DevicesTableToolbar } from "@/components/device-table-toolbar";
 import { getColumns, blockedColumns, type Device } from "@/components/table-columns";
 
 export default function DevicesView() {
-  const [data, setData] = useState<Device[]>([]);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
 
-  const normalDevices = useMemo(() => data.filter(d => !d.is_blocked), [data]);
-  const blockedDevices = useMemo(() => data.filter(d => d.is_blocked), [data]);
-
-  const handleAction = async (mac: string, action: 'revoke' | 'block') => {
-    try {
-      const host = window.location.hostname;
-      const response = await fetch(`http://${host}:8000/api/${action}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mac_address: mac }),
-      });
-
-      if (!response.ok) { console.error(`Fallo al ejecutar ${action}`); }
-    } catch (error) { console.error("Error de red al ejecutar acción:", error); }
-  };
-
-  const columns = useMemo(() => getColumns(handleAction), []);
-
-  useEffect(() => {
-    const host = window.location.hostname;
-
-    const fetchDevices = async () => {
-      try {
-        const response = await fetch(`http://${host}:8000/api/devices`);
-        const json = await response.json();
-        if (json.status === "success") { setData(json.data); }
-      } catch (error) { console.error("Failed to fetch devices:", error); }
-    };
-
-    fetchDevices();
-
-    const ws = new WebSocket(`ws://${host}:8000/ws/devices`);
-    ws.onopen = () => { console.log("WebSocket Connected to ZeroGate Network"); };
-
-    ws.onmessage = (event) => {
-      try {
-        const incomingData = JSON.parse(event.data);
-        if (incomingData.status === "success") { setData(incomingData.data); }
-      } catch (error) { console.error("Error parsing WebSocket message:", error); }
-    };
-
-    ws.onclose = () => { console.log("WebSocket Disconnected"); };
-
-    return () => { ws.close(); };
-  }, []);
+  const { normalDevices, blockedDevices, stats, handleAction } = useDeviceNetwork()
+  const columns = useMemo(() => getColumns(handleAction), [handleAction]);
 
   const table = useReactTable({
     data: normalDevices,
@@ -88,10 +45,6 @@ export default function DevicesView() {
     getCoreRowModel: getCoreRowModel(),
   });
 
-  const totalDevices = data.length;
-  const activeDevices = data.filter(d => d.is_authenticated).length;
-  const expiredDevices = data.filter(d => !d.is_authenticated).length;
-
   return (
     <main className="min-h-screen bg-background p-8 text-foreground">
       <div className="max-w-[1400px] mx-auto space-y-8">
@@ -103,17 +56,17 @@ export default function DevicesView() {
 
         {/* STATS */}
         <div className="grid grid-cols-2 lg:grid-cols-8 gap-4">
-          <InfoWidget title="Total Visitors" value={totalDevices} icon={Users} />
+          <InfoWidget title="Total Visitors" value={stats.total} icon={Users} />
 
           <InfoWidget
             title="Active Sessions"
-            value={activeDevices}
+            value={stats.active}
             icon={Wifi}
-            textColor={activeDevices > 0 ? "text-green-500" : "text-foreground"}
-            iconColor={activeDevices > 0 ? "text-green-500/10" : "text-white/5"}
+            textColor={stats.active > 0 ? "text-green-500" : "text-foreground"}
+            iconColor={stats.active > 0 ? "text-green-500/10" : "text-white/5"}
           />
 
-          <InfoWidget title="Offline" value={expiredDevices} icon={Clock} />
+          <InfoWidget title="Offline" value={stats.offline} icon={Clock} />
 
           <InfoWidget
             title="Blocked"
@@ -129,7 +82,7 @@ export default function DevicesView() {
 
         {/* MAIN TABLE */}
         <div className="space-y-4">
-          <DevicesTableToolbar table={table} totalDevices={totalDevices} />
+          <DevicesTableToolbar table={table} totalDevices={stats.total} />
           <DataTable table={table} columnsLength={columns.length} showPagination={true} />
         </div>
 
