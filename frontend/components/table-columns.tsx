@@ -87,7 +87,8 @@ export const getColumns = (handleAction: (mac: string, action: 'revoke' | 'block
     },
   },
   {
-    accessorKey: "status",
+    id: "status",
+    accessorFn: (row) => row.is_authenticated,
     header: "Status",
     cell: ({ row }) => {
       const device = row.original;

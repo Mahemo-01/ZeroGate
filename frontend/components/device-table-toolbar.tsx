@@ -3,6 +3,8 @@ import { Settings2, ChevronDown, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils"
+
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -16,18 +18,34 @@ interface DevicesTableToolbarProps<TData> {
 }
 
 export function DevicesTableToolbar<TData>({ table, totalDevices }: DevicesTableToolbarProps<TData>) {
+  const isAuthFilter = table.getColumn("status")?.getFilterValue();
+  const currentTab = isAuthFilter === true ? "Active" : isAuthFilter === false ? "Offline" : "All";
+  const handleTabChange = (value: string) => {
+    if (value === "All") {
+      table.getColumn("status")?.setFilterValue(undefined);
+    } else if (value === "Active") {
+      table.getColumn("status")?.setFilterValue(true);
+    } else if (value === "Offline") {
+      table.getColumn("status")?.setFilterValue(false);
+    }
+  };
+
   return (
     <div className="flex items-center justify-between">
-      <Tabs defaultValue="all" className="w-[400px]">
-        <TabsList className="bg-muted border border-border">
-          <TabsTrigger value="all" className="data-[state=active]:!bg-primary data-[state=active]:text-primary-foreground">
+      <Tabs
+        value={currentTab}
+        onValueChange={handleTabChange}
+        className="w-auto"
+      >
+        <TabsList className="bg-card border border-border">
+          <TabsTrigger value="All" className="flex items-center gap-2 data-[state=active]:bg-muted data-[state=active]:text-foreground">
             All Devices <Badge variant="secondary" className="ml-2 bg-secondary text-secondary-foreground">{totalDevices}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="active" className="data-[state=active]:bg-muted data-[state=active]:text-green-500">
+          <TabsTrigger value="Active" className="data-[state=active]:bg-muted data-[state=active]:text-foreground">
             Active
           </TabsTrigger>
-          <TabsTrigger value="expired" className="data-[state=active]:bg-muted data-[state=active]:text-red-400">
-            Expired
+          <TabsTrigger value="Offline" className="data-[state=active]:bg-muted data-[state=active]:text-foreground">
+            Offline
           </TabsTrigger>
         </TabsList>
       </Tabs>
