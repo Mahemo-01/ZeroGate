@@ -32,8 +32,20 @@ class FirewallController:
       if self.is_production:
          cmd = f"sudo iptables -D FORWARD -m mac --mac-source {mac_address} -j ACCEPT"
          subprocess.run(cmd.split(), check = False)
+
+         cmd_drop = f"sudo iptables -I FORWARD -m mac --mac-source {mac_address} -j DROP"
+         subprocess.run(cmd.split(), check = False)
          print(f"🚫 [LINUX]: Device QUARANTINED: {mac_address}")
       else:
          print(f"- [DEV]:   Device QUARANTINED: {mac_address}")
+
+   def unblock_device(self, mac_address: str):
+      """Removes a MAC address from the quarantine (DROP) list."""
+      if self.is_production:
+         cmd = f"sudo iptables -D FORWARD -m mac --mac-source {mac_address} -j DROP"
+         subprocess.run(cmd.split(), check = False)
+         print(f"- [LINUX]: Device RESTORED: {mac_address}")
+      else:
+         print(f"- [DEV]:   Device RESTORED: {mac_address}")
 
 network_guard = FirewallController()

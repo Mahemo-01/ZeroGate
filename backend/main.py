@@ -221,6 +221,19 @@ async def trigger_block(req: ActionRequest, db: Session = Depends(get_db)):
    await manager.broadcast(get_all_devices_payload(db))
    return {"status": "blocked", "mac": req.mac_address}
 
+@app.post("/api/unblock")
+async def unblock_device(req: ActionRequest, db: Session = Depends(get_db)):
+   device = db.query(models.ConnectedDevice).filter(models.ConnectedDevice.mac_address == req.mac_address).first()
+   if not device: raise HTTPException(status_code = 404, detail = "Device not found")
+      
+   network_guard.unblock_device(req.mac_address)      
+   device.is_authenticated = True
+   device.is_blocked = False
+   db.commit()
+   
+   await manager.broadcast(get_all_devices_payload(db))
+   return {"status": "success", "message": f"Device {req.mac_address} restored successfully", "mac": req.mac_address}
+
 @app.post("/api/internal/trigger-update")
 async def trigger_ws_update(db: Session = Depends(get_db)):
    await manager.broadcast(get_all_devices_payload(db))

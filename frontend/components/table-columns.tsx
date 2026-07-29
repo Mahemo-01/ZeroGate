@@ -1,7 +1,8 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, ShieldAlert, ShieldX, WifiOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MoreHorizontal, ShieldAlert, ShieldX, WifiOff, CheckCircle2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -134,7 +135,7 @@ export const getColumns = (handleAction: (mac: string, action: 'revoke' | 'block
   },
 ];
 
-export const blockedColumns: ColumnDef<Device>[] = [
+export const getBlockedColumns = (handleAction: (mac: string, action: 'revoke' | 'block' | 'unblock') => void): ColumnDef<Device>[] => [
   {
     accessorKey: "mac_address",
     header: "Threat MAC",
@@ -153,6 +154,31 @@ export const blockedColumns: ColumnDef<Device>[] = [
   {
     accessorKey: "status",
     header: "Status",
-    cell: () => <Badge variant="outline" className="border-red-500/50 text-red-500 bg-red-500/10"><ShieldX className="w-3 h-3 mr-1" /> Quarantined</Badge>,
+    cell: () => <Badge variant="outline" className="border-red-500/50 text-red-500 bg-red-500/10"><ShieldX className="w-3 h-3 mr-1" />Blocked</Badge>,
+  },
+  {
+    id: "actions",
+    enableHiding: false,
+    cell: ({ row }) => {
+      const device = row.original;
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex items-center justify-center rounded-md h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors mx-auto">
+            <MoreHorizontal className="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-popover border-border text-popover-foreground">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Network Actions</DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={() => handleAction(device.mac_address, 'unblock')}
+                className="text-green-500 focus:text-green-500 focus:bg-green-950/30 cursor-pointer"
+              >
+                <CheckCircle2 className="mr-2 h-4 w-4" /> Restore Access
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    }
   }
 ];

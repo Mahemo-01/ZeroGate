@@ -8,7 +8,7 @@ import { InfoWidget } from "@/components/info-widget";
 import { NetworkTrafficChart } from "@/components/network-traffic-chart";
 import { DataTable } from "@/components/data-table";
 import { DevicesTableToolbar } from "@/components/device-table-toolbar";
-import { getColumns, blockedColumns, type Device } from "@/components/table-columns";
+import { getColumns, getBlockedColumns } from "@/components/table-columns";
 
 export default function DevicesView() {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -18,6 +18,7 @@ export default function DevicesView() {
 
   const { normalDevices, blockedDevices, stats, handleAction } = useDeviceNetwork()
   const columns = useMemo(() => getColumns(handleAction), [handleAction]);
+  const blockedColumns = useMemo(() => getBlockedColumns(handleAction), [handleAction])
 
   const table = useReactTable({
     data: normalDevices,
