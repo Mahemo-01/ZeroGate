@@ -1,10 +1,10 @@
 /**
  * Copies text to the clipboard, falling back to the legacy
- * execCommand('copy') trick when running in an insecure context
- * (plain HTTP — e.g. a captive portal served from 192.168.4.1).
+ * execCommand('copy') when running in an insecure context
+ * (plain HTTP)
  *
  * navigator.clipboard.writeText only works under a secure context
- * (HTTPS or localhost), so this fallback is required for the AP.
+ * (HTTPS or localhost).
  */
 export async function copyToClipboard(text: string): Promise<boolean> {
   if (navigator.clipboard && window.isSecureContext) {
@@ -21,8 +21,6 @@ export async function copyToClipboard(text: string): Promise<boolean> {
 function copyWithLegacyFallback(text: string): boolean {
   const textarea = document.createElement("textarea");
   textarea.value = text;
-
-  // keep it off-screen and non-disruptive
   textarea.style.position = "fixed";
   textarea.style.top = "0";
   textarea.style.left = "0";
@@ -33,13 +31,10 @@ function copyWithLegacyFallback(text: string): boolean {
   textarea.select();
 
   try {
-    // @ts-ignore: execCommand está deprecado pero es el único fallback que funciona en HTTP local
-    const success = document.execCommand("copy");
+    const success = document.execCommand("copy"); // @ts-ignore: execCommand está deprecado pero es el único fallback que funciona en HTTP local
     return success;
   } catch (err) {
     console.error("Legacy copy fallback failed:", err);
     return false;
-  } finally {
-    document.body.removeChild(textarea);
-  }
+  } finally { document.body.removeChild(textarea); }
 }

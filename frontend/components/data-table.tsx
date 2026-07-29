@@ -63,7 +63,6 @@ export function DataTable<TData>({
         </Table>
       </div>
 
-      {/* Paginación Condicional */}
       {showPagination && <DataTablePagination table={table} />}
     </div>
   );
