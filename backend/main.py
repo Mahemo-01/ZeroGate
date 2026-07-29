@@ -162,6 +162,27 @@ def get_alerts(db: Session = Depends(get_db)):
       })
    return result
 
+@app.get("/api/network/traffic")
+def get_visitors_history(db: Session = Depends(get_db)):
+   daily_counts = {}
+   today = datetime.now()
+   
+   for i in range(89, -1, -1):
+      day_str = (today - timedelta(days = i)).strftime("%Y-%m-%d")
+      daily_counts[day_str] = 0
+
+   ninety_days_ago = today - timedelta(days = 90)
+   recent_devices = db.query(models.ConnectedDevice).filter(models.ConnectedDevice.first_seen >= ninety_days_ago).all()
+
+   for device in recent_devices:
+      if device.first_seen:
+         day_str = device.first_seen.strftime("%Y-%m-%d")
+         if day_str in daily_counts: daily_counts[day_str] += 1
+
+   result = [{"date": k, "visitors": v} for k, v in daily_counts.items()]
+
+   return result
+
 @app.post("/api/register")
 async def register_guest(req: RegisterRequest, request: Request, db: Session = Depends(get_db)):
    client_ip = request.client.host

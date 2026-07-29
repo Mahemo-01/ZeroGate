@@ -1,46 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
 
-// --- MOCK DATA ---
-const chartData = [
-  // MAYO
-  { date: "2026-05-01", visitors: 182 }, { date: "2026-05-02", visitors: 205 }, { date: "2026-05-03", visitors: 198 },
-  { date: "2026-05-04", visitors: 145 }, { date: "2026-05-05", visitors: 130 }, { date: "2026-05-06", visitors: 175 },
-  { date: "2026-05-07", visitors: 210 }, { date: "2026-05-08", visitors: 260 }, { date: "2026-05-09", visitors: 290 },
-  { date: "2026-05-10", visitors: 250 }, { date: "2026-05-11", visitors: 190 }, { date: "2026-05-12", visitors: 480 },
-  { date: "2026-05-13", visitors: 430 }, { date: "2026-05-14", visitors: 215 }, { date: "2026-05-15", visitors: 180 },
-  { date: "2026-05-16", visitors: 165 }, { date: "2026-05-17", visitors: 170 }, { date: "2026-05-18", visitors: 195 },
-  { date: "2026-05-19", visitors: 140 }, { date: "2026-05-20", visitors: 135 }, { date: "2026-05-21", visitors: 120 },
-  { date: "2026-05-22", visitors: 110 }, { date: "2026-05-23", visitors: 280 }, { date: "2026-05-24", visitors: 310 },
-  { date: "2026-05-25", visitors: 305 }, { date: "2026-05-26", visitors: 260 }, { date: "2026-05-27", visitors: 210 },
-  { date: "2026-05-28", visitors: 195 }, { date: "2026-05-29", visitors: 185 }, { date: "2026-05-30", visitors: 200 },
-  { date: "2026-05-31", visitors: 220 },
-  // JUNIO
-  { date: "2026-06-01", visitors: 160 }, { date: "2026-06-02", visitors: 140 }, { date: "2026-06-03", visitors: 125 },
-  { date: "2026-06-04", visitors: 115 }, { date: "2026-06-05", visitors: 105 }, { date: "2026-06-06", visitors: 130 },
-  { date: "2026-06-07", visitors: 155 }, { date: "2026-06-08", visitors: 220 }, { date: "2026-06-09", visitors: 340 },
-  { date: "2026-06-10", visitors: 410 }, { date: "2026-06-11", visitors: 485 }, { date: "2026-06-12", visitors: 460 },
-  { date: "2026-06-13", visitors: 390 }, { date: "2026-06-14", visitors: 375 }, { date: "2026-06-15", visitors: 310 },
-  { date: "2026-06-16", visitors: 250 }, { date: "2026-06-17", visitors: 230 }, { date: "2026-06-18", visitors: 205 },
-  { date: "2026-06-19", visitors: 180 }, { date: "2026-06-20", visitors: 190 }, { date: "2026-06-21", visitors: 215 },
-  { date: "2026-06-22", visitors: 260 }, { date: "2026-06-23", visitors: 185 }, { date: "2026-06-24", visitors: 160 },
-  { date: "2026-06-25", visitors: 150 }, { date: "2026-06-26", visitors: 280 }, { date: "2026-06-27", visitors: 320 },
-  { date: "2026-06-28", visitors: 290 }, { date: "2026-06-29", visitors: 210 }, { date: "2026-06-30", visitors: 190 },
-  // JULIO
-  { date: "2026-07-01", visitors: 180 }, { date: "2026-07-02", visitors: 175 }, { date: "2026-07-03", visitors: 210 },
-  { date: "2026-07-04", visitors: 250 }, { date: "2026-07-05", visitors: 310 }, { date: "2026-07-06", visitors: 580 },
-  { date: "2026-07-07", visitors: 520 }, { date: "2026-07-08", visitors: 340 }, { date: "2026-07-09", visitors: 210 },
-  { date: "2026-07-10", visitors: 185 }, { date: "2026-07-11", visitors: 160 }, { date: "2026-07-12", visitors: 145 },
-  { date: "2026-07-13", visitors: 170 }, { date: "2026-07-14", visitors: 195 }, { date: "2026-07-15", visitors: 220 },
-  { date: "2026-07-16", visitors: 280 }, { date: "2026-07-17", visitors: 345 }, { date: "2026-07-18", visitors: 310 },
-  { date: "2026-07-19", visitors: 260 }, { date: "2026-07-20", visitors: 240 }, { date: "2026-07-21", visitors: 215 },
-  { date: "2026-07-22", visitors: 190 }, { date: "2026-07-23", visitors: 180 }, { date: "2026-07-24", visitors: 420 },
-  { date: "2026-07-25", visitors: 490 }, { date: "2026-07-26", visitors: 510 }, { date: "2026-07-27", visitors: 430 },
-  { date: "2026-07-28", visitors: 380 }
-];
+interface TrafficData {
+  date: string;
+  visitors: number;
+}
 
 const chartConfig = {
   visitors: {
@@ -50,13 +17,29 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function NetworkTrafficChart() {
+  const [chartData, setChartData] = useState<TrafficData[]>([]);
   const [timeRange, setTimeRange] = useState("3m");
 
   const filteredData = useMemo(() => {
     if (timeRange === "7d") { return chartData.slice(-7); }
     if (timeRange === "30d") { return chartData.slice(-30); }
     return chartData;
-  }, [timeRange]);
+  }, [timeRange, chartData]);
+
+  useEffect(() => {
+    const fetchRealTraffic = async () => {
+      try {
+        const res = await fetch("/api/network/traffic");
+        if (!res.ok) { throw new Error(`Error del servidor: ${res.status}`); }
+        const data = await res.json();
+        setChartData(data);
+      } catch (error) { console.error("Error fetching traffic data:", error); }
+    };
+
+    fetchRealTraffic();
+    const interval = setInterval(fetchRealTraffic, 300000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <Card variant="glassmorphism" className="col-span-2 lg:col-span-4 flex flex-col justify-between p-6">
