@@ -26,7 +26,7 @@ class FirewallController:
       else:
          print(f"- [DEV]:   Internet access REVOKED for {mac_address} (Expired)")
 
-   def quarantine_device(self, mac_address: str):
+   def block_device(self, mac_address: str):
       """Removes a MAC address from the ALLOW list (Manual/Security block)."""
       # TODO: BLOCK MAC ADDRESS, maybe lets them now they ban
       if self.is_production:

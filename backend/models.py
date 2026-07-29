@@ -14,6 +14,7 @@ class ConnectedDevice(Base):
 
    # Status
    is_authenticated = Column(Boolean, default = False)
+   is_blocked = Column(Boolean, default = False)
    first_seen = Column(DateTime, default = lambda: datetime.now(timezone.utc))
    expiration_time = Column(DateTime, nullable = True)
 

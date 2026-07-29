@@ -115,6 +115,7 @@ def get_all_devices_payload(db: Session):
          "email": device.email,
          "custom_label": device.custom_label,
          "is_authenticated": device.is_authenticated,
+         "is_blocked": device.is_blocked,
          "first_seen": device.first_seen.isoformat() if device.first_seen else None,
          "expiration_time": device.expiration_time.isoformat() if device.expiration_time else None
       })
@@ -207,17 +208,18 @@ async def trigger_revoke(req: ActionRequest, db: Session = Depends(get_db)):
    await manager.broadcast(get_all_devices_payload(db))
    return {"status": "revoked", "mac": req.mac_address}
 
-@app.post("/api/quarantine")
-async def trigger_quarantine(req: ActionRequest, db: Session = Depends(get_db)):
+@app.post("/api/block")
+async def trigger_block(req: ActionRequest, db: Session = Depends(get_db)):
    device = db.query(models.ConnectedDevice).filter(models.ConnectedDevice.mac_address == req.mac_address).first()
    if not device: raise HTTPException(status_code = 404, detail = "Device not found")
       
-   network_guard.quarantine_device(req.mac_address)
+   network_guard.block_device(req.mac_address)
    device.is_authenticated = False
+   device.is_blocked = True
    db.commit()
    
    await manager.broadcast(get_all_devices_payload(db))
-   return {"status": "quarantined", "mac": req.mac_address}
+   return {"status": "blocked", "mac": req.mac_address}
 
 @app.post("/api/internal/trigger-update")
 async def trigger_ws_update(db: Session = Depends(get_db)):
