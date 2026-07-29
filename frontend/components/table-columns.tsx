@@ -3,7 +3,8 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, ShieldAlert, ShieldX, WifiOff, CheckCircle2, ArrowUpDown, Copy, Check } from "lucide-react";
+import { Column } from "@tanstack/react-table";
+import { MoreHorizontal, ShieldAlert, ShieldX, WifiOff, CheckCircle2, ChevronUp, ChevronDown, ArrowUpDown, Copy, Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +34,33 @@ const formatExpiration = (dateString: string) => {
     minute: '2-digit'
   }).format(date);
 };
+
+interface SortableHeaderProps<TData, TValue> {
+  column: Column<TData, TValue>;
+  title: string;
+}
+
+export function SortableHeader<TData, TValue>({ column, title }: SortableHeaderProps<TData, TValue>) {
+  const isSorted = column.getIsSorted();
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => column.toggleSorting(isSorted === "asc")}
+      className="-ml-3 h-8 data-[state=open]:bg-accent text-muted-foreground hover:text-primary hover:cursor-pointer font-medium"
+    >
+      <span>{title}</span>
+      {isSorted === "asc" ? (
+        <ChevronUp className="ml-2 h-3.5 w-3.5 text-foreground" />
+      ) : isSorted === "desc" ? (
+        <ChevronDown className="ml-2 h-3.5 w-3.5 text-foreground" />
+      ) : (
+        <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-50" />
+      )}
+    </Button>
+  );
+}
 
 const MacCell = ({ mac }: { mac: string }) => {
   const [copied, setCopied] = useState(false);
@@ -88,17 +116,17 @@ export const getColumns = (handleAction: (mac: string, action: 'revoke' | 'block
   },
   {
     accessorKey: "ip_address",
-    header: "IP Address",
+    header: ({ column }) => <SortableHeader column={column} title="IP Address" />,
     cell: ({ row }) => <div className="font-mono text-xs text-primary font-semibold">{row.getValue("ip_address")}</div>,
   },
   {
     accessorKey: "email",
-    header: "Email",
+    header: ({ column }) => <SortableHeader column={column} title="Email" />,
     cell: ({ row }) => <div className="text-foreground">{row.getValue("email") || "N/A"}</div>,
   },
   {
     accessorKey: "risk_level",
-    header: "Risk Level",
+    header: ({ column }) => <SortableHeader column={column} title="Risk Level" />,
     cell: ({ row }) => {
       const risk = row.getValue("risk_level") as string || "None";
 
@@ -128,7 +156,7 @@ export const getColumns = (handleAction: (mac: string, action: 'revoke' | 'block
   },
   {
     accessorKey: "expiration_time",
-    header: "Expires at",
+    header: ({ column }) => <SortableHeader column={column} title="Expires at" />,
     cell: ({ row }) => (
       <div className="text-xs text-muted-foreground font-medium">
         {formatExpiration(row.getValue("expiration_time"))}
