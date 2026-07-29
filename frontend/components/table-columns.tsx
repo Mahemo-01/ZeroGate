@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuGroup
 } from "@/components/ui/dropdown-menu";
+import { copyToClipboard } from "@/lib/clipboard"
 
 export interface Device {
   id: number;
@@ -65,10 +66,12 @@ export function SortableHeader<TData, TValue>({ column, title }: SortableHeaderP
 const MacCell = ({ mac }: { mac: string }) => {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(mac);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+  const handleCopy = async () => {
+    const success = await copyToClipboard(mac);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }
   };
 
   return (
