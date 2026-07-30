@@ -27,6 +27,19 @@ export interface Device {
   expiration_time: string;
 }
 
+export interface ThreatAlert {
+  id: number;
+  timestamp: string;
+  signature: string;
+  severity: number;
+  action_taken: string;
+  device: {
+    mac_address: string;
+    email: string;
+    label: string;
+  };
+}
+
 const formatExpiration = (dateString: string) => {
   const date = new Date(dateString);
   return new Intl.DateTimeFormat('en-US', {
@@ -238,5 +251,117 @@ export const getBlockedColumns = (handleAction: (mac: string, action: 'revoke' |
         </DropdownMenu>
       );
     }
+  }
+];
+
+export const getThreatColumns = (handleAction: (mac: string, action: 'revoke' | 'block') => void): ColumnDef<ThreatAlert>[] => [
+  {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={table.getIsAllPageRowsSelected() || table.getIsSomePageRowsSelected()}
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+        className="border-input data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+        className="border-input data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
+  {
+    accessorKey: "timestamp",
+    header: ({ column }) => <SortableHeader column={column} title="Timestamp" />,
+    cell: ({ row }) => (
+      <div className="font-mono text-xs text-muted-foreground whitespace-nowrap">
+        {new Date(row.getValue("timestamp")).toLocaleString('en-US', {
+          month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'
+        })}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "signature",
+    header: ({ column }) => <SortableHeader column={column} title="Threat Signature" />,
+    cell: ({ row }) => (
+      <div className="font-medium text-destructive flex items-center gap-2">
+        <ShieldAlert className="h-4 w-4" />
+        {row.getValue("signature")}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "severity",
+    header: ({ column }) => <SortableHeader column={column} title="Severity" />,
+    cell: ({ row }) => {
+      const severity = row.getValue("severity") as number;
+      const isCritical = severity <= 2;
+
+      return (
+        <Badge variant={isCritical ? "destructive" : "secondary"} className={isCritical ? "bg-red-500/10 text-red-500 border-red-500/50" : ""}>
+          {isCritical ? "CRITICAL" : `WARN (Lvl ${severity})`}
+        </Badge>
+      );
+    },
+  },
+  {
+    accessorFn: (row) => row.device.mac_address,
+    id: "mac_address",
+    header: "Target MAC",
+    cell: ({ row }) => <MacCell mac={row.getValue("mac_address")} />,
+  },
+  {
+    accessorFn: (row) => row.device.email,
+    id: "email",
+    header: "Target Identity",
+    cell: ({ row }) => <div className="text-foreground">{row.getValue("email") || "Unknown User"}</div>,
+  },
+  {
+    accessorKey: "action_taken",
+    header: "System Action",
+    cell: ({ row }) => (
+      <Badge variant="outline" className="uppercase text-xs border-primary/30 text-primary bg-primary/5">
+        {row.getValue("action_taken")}
+      </Badge>
+    ),
+  },
+  {
+    id: "actions",
+    enableHiding: false,
+    cell: ({ row }) => {
+      const mac = row.original.device.mac_address;
+
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex items-center justify-center rounded-md h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors mx-auto">
+            <MoreHorizontal className="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-popover border-border text-popover-foreground">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Incident Response</DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={() => handleAction(mac, 'revoke')}
+                className="text-amber-400 focus:text-amber-400 focus:bg-amber-950/30 cursor-pointer"
+              >
+                <WifiOff className="mr-2 h-4 w-4" /> Disconnect Session
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleAction(mac, 'block')}
+                className="text-red-400 focus:text-red-400 focus:bg-red-950/30 cursor-pointer"
+              >
+                <ShieldAlert className="mr-2 h-4 w-4" /> Quarantine Device
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    },
   }
 ];
