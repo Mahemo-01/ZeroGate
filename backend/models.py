@@ -19,6 +19,7 @@ class ConnectedDevice(Base):
    expiration_time = Column(DateTime, nullable = True)
 
    # Threats
+   risk_level = Column(String, default = "None")
    alerts = relationship("ThreatAlert", back_populates = "device")
 
 class ThreatAlert(Base):
