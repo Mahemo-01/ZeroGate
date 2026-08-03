@@ -1,5 +1,5 @@
-from pydantic import BaseModel, ConfigDict
-from datetime import datetime
+from pydantic import BaseModel, ConfigDict, field_validator
+from datetime import datetime, timezone
 from typing import Optional, List
 
 # --- SCHEMAS - THREAT ALERTS ---
@@ -13,6 +13,12 @@ class ThreatAlertResponse(ThreatAlertBase):
    timestamp: datetime
    device_id: int
    model_config = ConfigDict(from_attributes = True) 
+
+   @field_validator('timestamp', mode = 'before')
+   @classmethod
+   def set_utc(cls, v):
+      if isinstance(v, datetime) and v.tzinfo is None: return v.replace(tzinfo = timezone.utc)
+      return v
 
 # --- SCHEMAS - CONNECTED DEVICES ---
 class DeviceBase(BaseModel):
@@ -30,6 +36,12 @@ class DeviceResponse(DeviceBase):
    expiration_time: Optional[datetime] = None
    alerts: List[ThreatAlertResponse] = []
    model_config = ConfigDict(from_attributes = True)
+
+   @field_validator('first_seen', 'expiration_time', mode = 'before')
+   @classmethod
+   def set_utc(cls, v):
+      if isinstance(v, datetime) and v.tzinfo is None: return v.replace(tzinfo = timezone.utc)
+      return v
 
 # --- SCHEMAS - REQUESTS ---
 class ActionRequest(BaseModel):
