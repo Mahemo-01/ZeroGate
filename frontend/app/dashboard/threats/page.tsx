@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -8,32 +8,17 @@ import {
   getPaginationRowModel,
   SortingState
 } from "@tanstack/react-table";
-import { ShieldAlert } from "lucide-react";
 import { DataTable } from "@/components/data-table";
-import { getThreatColumns, ThreatAlert } from "@/components/table-columns";
+import { getThreatColumns } from "@/components/table-columns";
 import { useDeviceNetwork } from "@/hooks/use-device-network";
+import { useThreatAlerts } from "@/hooks/use-threat-alerts";
 
 export default function Dashboard() {
-  const [alerts, setAlerts] = useState<ThreatAlert[]>([]);
-  const [loading, setLoading] = useState(true);
   const [sorting, setSorting] = useState<SortingState>([{ id: "timestamp", desc: true }]);
-
+  const { alerts, loading } = useThreatAlerts();
   const { handleAction } = useDeviceNetwork();
+
   const columns = useMemo(() => getThreatColumns(handleAction), [handleAction]);
-
-  useEffect(() => {
-    fetch("/api/alerts")
-      .then((res) => {
-        if (!res.ok) throw new Error("Error en el servidor");
-        return res.json();
-      })
-      .then((data) => {
-        setAlerts(data);
-        setLoading(false);
-      })
-      .catch((err) => console.error("Failed to fetch API:", err));
-  }, []);
-
   const table = useReactTable({
     data: alerts,
     columns: columns,
@@ -41,9 +26,7 @@ export default function Dashboard() {
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
-    state: {
-      sorting,
-    },
+    state: { sorting },
     initialState: { pagination: { pageSize: 10 } },
   });
 
