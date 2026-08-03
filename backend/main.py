@@ -38,6 +38,35 @@ async def session_executioner():
 # --- LIFESPAN MANAGER ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+   print("🔄 [BOOT SYNC]: Synchronizing network state with iptables...")
+   try:
+      db = database.SessionLocal()
+      now = datetime.now()
+      all_devices = db.query(models.ConnectedDevice).all()
+      
+      restored_access = 0
+      restored_blocks = 0
+      
+      for device in all_devices:
+         if device.is_blocked:
+            network_guard.block_device(device.mac_address)
+            restored_blocks += 1
+         
+         elif device.is_authenticated:
+            if device.expiration_time and device.expiration_time > now:
+               network_guard.grant_access(device.mac_address)
+               restored_access += 1
+            else:
+               device.is_authenticated = False
+               network_guard.revoke_access(device.mac_address)
+               print(f"- [BOOT SYNC]: Cleared expired session for {device.mac_address}")
+               
+      db.commit()
+      db.close()
+      print(f"✅ [BOOT SYNC]: Completed. {restored_access} sessions restored, {restored_blocks} active blocks.")
+   except Exception as e: 
+      print(f"❌ [BOOT SYNC]: Critical error during synchronization: {e}")
+
    task = asyncio.create_task(session_executioner())
    yield
    task.cancel()
