@@ -1,13 +1,13 @@
 from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 import json, os, asyncio
 from firewall import network_guard
-import database, models
+import database, models, schemas
 from database import engine
 
 async def session_executioner():
@@ -16,7 +16,7 @@ async def session_executioner():
       await asyncio.sleep(60)
       try:
          db = database.SessionLocal()
-         now = datetime.now()
+         now = datetime.now(timezone.utc)
          
          expired_devices = db.query(models.ConnectedDevice).filter(
             models.ConnectedDevice.is_authenticated == True,
@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
    print("🔄 [BOOT SYNC]: Synchronizing network state with iptables...")
    try:
       db = database.SessionLocal()
-      now = datetime.now()
+      now = datetime.now(timezone.utc)
       all_devices = db.query(models.ConnectedDevice).all()
       
       restored_access = 0
@@ -135,19 +135,7 @@ manager = ConnectionManager()
 
 def get_all_devices_payload(db: Session):
    devices = db.query(models.ConnectedDevice).all()
-   result = []
-   for device in devices:
-      result.append({
-         "id": device.id,
-         "mac_address": device.mac_address,
-         "ip_address": device.ip_address,
-         "email": device.email,
-         "custom_label": device.custom_label,
-         "is_authenticated": device.is_authenticated,
-         "is_blocked": device.is_blocked,
-         "first_seen": device.first_seen.isoformat() if device.first_seen else None,
-         "expiration_time": device.expiration_time.isoformat() if device.expiration_time else None
-      })
+   result = [schemas.DeviceResponse.model_validate(device).model_dump(mode = 'json') for device in devices]
    return {"status": "success", "data": result}
 
 # --- ROUTES ---
@@ -172,14 +160,13 @@ def get_devices(db: Session = Depends(get_db)):
 
 @app.get("/api/alerts")
 def get_alerts(db: Session = Depends(get_db)):
-   # Query alerts ordered by the most recent timestamp
    alerts = db.query(models.ThreatAlert).order_by(models.ThreatAlert.timestamp.desc()).all()
    
    result = []
    for alert in alerts:
       result.append({
          "id": alert.id,
-         "timestamp": alert.timestamp.isoformat() if alert.timestamp else None,
+         "timestamp": alert.timestamp.isoformat() + "Z" if alert.timestamp and alert.timestamp.tzinfo is None else (alert.timestamp.isoformat() if alert.timestamp else None),
          "signature": alert.signature,
          "severity": alert.severity,
          "action_taken": alert.action_taken,
@@ -194,7 +181,7 @@ def get_alerts(db: Session = Depends(get_db)):
 @app.get("/api/network/traffic")
 def get_visitors_history(db: Session = Depends(get_db)):
    daily_counts = {}
-   today = datetime.now()
+   today = datetime.now(timezone.utc)
    
    for i in range(89, -1, -1):
       day_str = (today - timedelta(days = i)).strftime("%Y-%m-%d")
@@ -220,7 +207,7 @@ async def register_guest(req: RegisterRequest, request: Request, db: Session = D
    if not client_mac:
       raise HTTPException(status_code = 400, detail = f"Error de red: No se pudo identificar la MAC para la IP {client_ip}")
 
-   expiration_time = datetime.now() + timedelta(hours = 2)
+   expiration_time = datetime.now(timezone.utc) + timedelta(hours = 2)
    device = db.query(models.ConnectedDevice).filter(models.ConnectedDevice.mac_address == client_mac).first()
 
    if not device:
@@ -252,7 +239,7 @@ async def trigger_revoke(req: ActionRequest, db: Session = Depends(get_db)):
       
    network_guard.revoke_access(req.mac_address) 
    device.is_authenticated = False
-   device.expiration_time = datetime.now() - timedelta(minutes = 1) 
+   device.expiration_time = datetime.now(timezone.utc) - timedelta(minutes = 1) 
    db.commit()
    
    await manager.broadcast(get_all_devices_payload(db))
