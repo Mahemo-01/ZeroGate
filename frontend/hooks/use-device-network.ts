@@ -7,12 +7,22 @@ export function useDeviceNetwork() {
   const normalDevices = useMemo(() => data.filter(d => !d.is_blocked), [data]);
   const blockedDevices = useMemo(() => data.filter(d => d.is_blocked), [data]);
 
-  const stats = useMemo(() => ({
-    total: data.length,
-    active: data.filter(d => d.is_authenticated && !d.is_blocked).length,
-    offline: data.filter(d => !d.is_authenticated && !d.is_blocked).length,
-    blocked: blockedDevices.length
-  }), [data, blockedDevices]);
+  const stats = useMemo(() => {
+    const now = new Date();
+
+    return {
+      total: data.length,
+      active: data.filter(d => {
+        const isExpired = new Date(d.expiration_time) < now;
+        return d.is_authenticated && !d.is_blocked && !isExpired;
+      }).length,
+      offline: data.filter(d => {
+        const isExpired = new Date(d.expiration_time) < now;
+        return (!d.is_authenticated || isExpired) && !d.is_blocked;
+      }).length,
+      blocked: blockedDevices.length
+    };
+  }, [data, blockedDevices]);
 
   const handleAction = useCallback(async (mac: string, action: 'revoke' | 'block' | 'unblock') => {
     try {
