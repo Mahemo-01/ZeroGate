@@ -75,10 +75,6 @@ export function DevicesTableToolbar<TData>({ table, totalDevices }: DevicesTable
               })}
           </DropdownMenuContent>
         </DropdownMenu>
-
-        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 text-sm">
-          <Plus className="mr-2 h-4 w-4" /> Whitelist Device
-        </Button>
       </div>
     </div>
   );

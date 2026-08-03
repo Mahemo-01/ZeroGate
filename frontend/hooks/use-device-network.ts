@@ -26,7 +26,7 @@ export function useDeviceNetwork() {
     };
   }, [data, blockedDevices]);
 
-  const handleAction = useCallback(async (mac: string, action: 'revoke' | 'block' | 'unblock') => {
+  const handleAction = useCallback(async (mac: string, action: 'revoke' | 'block' | 'unblock' | 'whitelist') => {
     try {
       const host = window.location.hostname;
       const response = await fetch(`http://${host}:8000/api/${action}`, {

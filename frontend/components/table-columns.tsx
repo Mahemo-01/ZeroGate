@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Column } from "@tanstack/react-table";
-import { MoreHorizontal, ShieldAlert, ShieldX, WifiOff, CheckCircle2, ChevronUp, ChevronDown, ArrowUpDown, Copy, Check } from "lucide-react";
+import { MoreHorizontal, Shield, ShieldAlert, ShieldX, WifiOff, CheckCircle2, ChevronUp, ChevronDown, ArrowUpDown, Copy, Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +43,8 @@ export interface ThreatAlert {
 const formatExpiration = (dateString: string) => {
   const date = new Date(dateString);
   return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
     weekday: 'short',
     hour: '2-digit',
     minute: '2-digit'
@@ -103,7 +105,7 @@ const MacCell = ({ mac }: { mac: string }) => {
   );
 };
 
-export const getColumns = (handleAction: (mac: string, action: 'revoke' | 'block') => void): ColumnDef<Device>[] => [
+export const getColumns = (handleAction: (mac: string, action: 'revoke' | 'block' | 'whitelist') => void): ColumnDef<Device>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -197,6 +199,9 @@ export const getColumns = (handleAction: (mac: string, action: 'revoke' | 'block
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAction(device.mac_address, 'block')} className="text-red-400 focus:text-red-400 focus:bg-red-950/30 cursor-pointer">
                 <ShieldAlert className="mr-2 h-4 w-4" /> Block Device
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAction(device.mac_address, 'whitelist')} className="text-emerald-500 focus:text-emerald-500 focus:bg-emerald-950/30 cursor-pointer">
+                <Shield className="mr-2 h-4 w-4" /> Add to Whitelist
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>

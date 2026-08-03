@@ -261,6 +261,20 @@ async def unblock_device(req: schemas.ActionRequest, db: Session = Depends(get_d
    await manager.broadcast(get_all_devices_payload(db))
    return {"status": "success", "message": f"Device {req.mac_address} restored successfully", "mac": req.mac_address}
 
+@app.post("/api/whitelist")
+async def whitelist_device(req: schemas.ActionRequest, db: Session = Depends(get_db)):
+   device = db.query(models.ConnectedDevice).filter(models.ConnectedDevice.mac_address == req.mac_address).first()
+   if not device: raise HTTPException(status_code = 404, detail = "Device not found")
+      
+   network_guard.grant_access(req.mac_address)      
+   device.is_authenticated = True
+   device.is_blocked = False
+   device.expiration_time = datetime.now(timezone.utc) + timedelta(days = 3650)
+   db.commit()
+   
+   await manager.broadcast(get_all_devices_payload(db))
+   return {"status": "success", "message": f"Device {req.mac_address} whitelisted 10 years", "mac": req.mac_address}
+
 @app.post("/api/internal/trigger-update")
 async def trigger_ws_update(db: Session = Depends(get_db)):
    await manager.broadcast(get_all_devices_payload(db))
