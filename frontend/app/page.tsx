@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 
 export default function CaptivePortal() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,14 +21,24 @@ export default function CaptivePortal() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: email
+          email: email,
+          password: password
         }),
       });
 
-      if (response.ok) { setStatus("success"); } else { setStatus("error"); }
+      if (response.ok) {
+        setStatus("success");
+      } else if (response.status === 401) {
+        setStatus("error");
+        setErrorMessage("Contraseña de acceso incorrecta. Pídela en el mostrador.");
+      } else {
+        setStatus("error");
+        setErrorMessage("Ocurrió un error en la red. Intenta de nuevo.");
+      }
     } catch (error) {
       console.error("Connection failed:", error);
       setStatus("error");
+      setErrorMessage("No se pudo conectar al servidor.");
     }
   };
 
@@ -66,10 +78,30 @@ export default function CaptivePortal() {
                 />
               </div>
 
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-foreground/80 mb-2">Network Password</label>
+                <Input
+                  type="password"
+                  id="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-10 rounded-lg border-border bg-background text-foreground transition-all focus-visible:border-primary focus-visible:ring-primary"
+                  placeholder="Password"
+                  disabled={status === "loading"}
+                />
+              </div>
+
+              {errorMessage && (
+                <div className="text-sm text-red-500 font-medium text-center bg-red-500/10 p-2 rounded-md border border-red-500/20">
+                  {errorMessage}
+                </div>
+              )}
+
               <Button
                 type="submit"
                 disabled={status === "loading"}
-                className="w-full h-10 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg transition-colors mb-2"
+                className="w-full h-10 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg transition-colors my-2"
               >
                 {status === "loading" ? "Authorizing..." : "Connect to Network"}
               </Button>

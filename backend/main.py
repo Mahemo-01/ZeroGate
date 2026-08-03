@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from typing import List
-from pydantic import BaseModel
 from contextlib import asynccontextmanager
 import json, os, asyncio
 from firewall import network_guard
@@ -88,17 +87,6 @@ def get_db():
    db = database.SessionLocal()
    try: yield db
    finally: db.close()
-
-# Models
-class ActionRequest(BaseModel):
-   mac_address: str
-
-class RegisterRequest(BaseModel):
-   email: str
-
-class GuestRegistration(BaseModel):
-   mac_address: str
-   email: str
 
 def get_mac_from_ip(ip: str) -> str:
    """Lee la tabla ARP de Linux para encontrar la MAC asociada a una IP"""
@@ -200,12 +188,14 @@ def get_visitors_history(db: Session = Depends(get_db)):
    return result
 
 @app.post("/api/register")
-async def register_guest(req: RegisterRequest, request: Request, db: Session = Depends(get_db)):
+async def register_guest(req: schemas.RegisterRequest, request: Request, db: Session = Depends(get_db)):
+   secret = os.getenv("WIFI_SECRET", "ZeroGate@2026")
+   if req.password != secret: raise HTTPException(status_code = 401, detail = "Contraseña de acceso incorrecta")
+
    client_ip = request.client.host
    client_mac = get_mac_from_ip(client_ip)
 
-   if not client_mac:
-      raise HTTPException(status_code = 400, detail = f"Error de red: No se pudo identificar la MAC para la IP {client_ip}")
+   if not client_mac: raise HTTPException(status_code = 400, detail = f"Error de red: No se pudo identificar la MAC para la IP {client_ip}")
 
    expiration_time = datetime.now(timezone.utc) + timedelta(hours = 2)
    device = db.query(models.ConnectedDevice).filter(models.ConnectedDevice.mac_address == client_mac).first()
@@ -233,7 +223,7 @@ async def register_guest(req: RegisterRequest, request: Request, db: Session = D
    return {"status": "success", "message": f"Internet access granted for {req.email}", "mac": client_mac, "expires_at": expiration_time.isoformat()}
 
 @app.post("/api/revoke")
-async def trigger_revoke(req: ActionRequest, db: Session = Depends(get_db)):
+async def trigger_revoke(req: schemas.ActionRequest, db: Session = Depends(get_db)):
    device = db.query(models.ConnectedDevice).filter(models.ConnectedDevice.mac_address == req.mac_address).first()
    if not device: raise HTTPException(status_code = 404, detail = "Device not found")
       
@@ -246,7 +236,7 @@ async def trigger_revoke(req: ActionRequest, db: Session = Depends(get_db)):
    return {"status": "revoked", "mac": req.mac_address}
 
 @app.post("/api/block")
-async def trigger_block(req: ActionRequest, db: Session = Depends(get_db)):
+async def trigger_block(req: schemas.ActionRequest, db: Session = Depends(get_db)):
    device = db.query(models.ConnectedDevice).filter(models.ConnectedDevice.mac_address == req.mac_address).first()
    if not device: raise HTTPException(status_code = 404, detail = "Device not found")
       
@@ -259,7 +249,7 @@ async def trigger_block(req: ActionRequest, db: Session = Depends(get_db)):
    return {"status": "blocked", "mac": req.mac_address}
 
 @app.post("/api/unblock")
-async def unblock_device(req: ActionRequest, db: Session = Depends(get_db)):
+async def unblock_device(req: schemas.ActionRequest, db: Session = Depends(get_db)):
    device = db.query(models.ConnectedDevice).filter(models.ConnectedDevice.mac_address == req.mac_address).first()
    if not device: raise HTTPException(status_code = 404, detail = "Device not found")
       

@@ -30,3 +30,15 @@ class DeviceResponse(DeviceBase):
    expiration_time: Optional[datetime] = None
    alerts: List[ThreatAlertResponse] = []
    model_config = ConfigDict(from_attributes = True)
+
+# --- SCHEMAS - REQUESTS ---
+class ActionRequest(BaseModel):
+   mac_address: str
+
+class RegisterRequest(BaseModel):
+   email: str
+   password: str
+
+class GuestRegistration(BaseModel):
+   mac_address: str
+   email: str
