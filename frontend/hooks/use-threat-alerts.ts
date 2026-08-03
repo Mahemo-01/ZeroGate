@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import type { ThreatAlert } from "@/components/table-columns";
+import { useZeroGateSocket } from "@/providers/websocket-provider";
 
 export function useThreatAlerts() {
   const [alerts, setAlerts] = useState<ThreatAlert[]>([]);
   const [loading, setLoading] = useState(true);
+  const { lastMessage } = useZeroGateSocket();
 
   const fetchAlerts = useCallback(async () => {
     try {
@@ -21,17 +23,14 @@ export function useThreatAlerts() {
 
   useEffect(() => {
     fetchAlerts();
-    const host = window.location.hostname;
-    const ws = new WebSocket(`ws://${host}:8000/ws/devices`);
+  }, [fetchAlerts]);
 
-    ws.onmessage = () => {
+  useEffect(() => {
+    if (lastMessage) {
       console.log("🔄 Security event detected. Updating alerts...");
       fetchAlerts();
-    };
-
-    ws.onerror = (error) => console.error("WebSocket Error:", error);
-    return () => ws.close();
-  }, [fetchAlerts]);
+    }
+  }, [lastMessage, fetchAlerts]);
 
   return { alerts, loading };
 }

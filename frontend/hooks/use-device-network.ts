@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import type { Device } from "@/components/table-columns";
+import { useZeroGateSocket } from "@/providers/websocket-provider";
 
 export function useDeviceNetwork() {
   const [data, setData] = useState<Device[]>([]);
+  const { lastMessage } = useZeroGateSocket();
 
   const normalDevices = useMemo(() => data.filter(d => !d.is_blocked), [data]);
   const blockedDevices = useMemo(() => data.filter(d => d.is_blocked), [data]);
@@ -33,32 +35,30 @@ export function useDeviceNetwork() {
         body: JSON.stringify({ mac_address: mac }),
       });
 
-      if (!response.ok) { console.error(`Fallo al ejecutar ${action} (${response.status})`); }
-    } catch (error) { console.error("Error de red al ejecutar acción:", error); }
+      if (!response.ok) { console.error(`Failed to execute ${action} (${response.status})`); }
+    } catch (error) { console.error("Network error executing action:", error); }
   }, []);
 
   useEffect(() => {
-    const host = window.location.hostname;
-
     const fetchDevices = async () => {
       try {
+        const host = window.location.hostname;
         const response = await fetch(`http://${host}:8000/api/devices`);
         const json = await response.json();
         if (json.status === "success") setData(json.data);
       } catch (error) { console.error("Failed to fetch devices:", error); }
     };
     fetchDevices();
-
-    const ws = new WebSocket(`ws://${host}:8000/ws/devices`);
-    ws.onmessage = (event) => {
-      try {
-        const json = JSON.parse(event.data);
-        if (json.status === "success") setData(json.data);
-      } catch (error) { console.error("Error WS:", error); }
-    };
-
-    return () => ws.close();
   }, []);
+
+  useEffect(() => {
+    if (lastMessage) {
+      try {
+        const json = JSON.parse(lastMessage);
+        if (json.status === "success") setData(json.data);
+      } catch (error) { console.error("Error parsing WS message:", error); }
+    }
+  }, [lastMessage]);
 
   return { normalDevices, blockedDevices, stats, handleAction };
 }
