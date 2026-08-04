@@ -159,7 +159,7 @@ export const getColumns = (handleAction: (mac: string, action: 'revoke' | 'block
     },
   },
   {
-    id: "status",
+    id: "is_authenticated",
     accessorFn: (row) => row.is_authenticated,
     header: "Status",
     cell: ({ row }) => {
