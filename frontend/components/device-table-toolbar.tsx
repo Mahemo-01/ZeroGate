@@ -18,15 +18,16 @@ interface DevicesTableToolbarProps<TData> {
 }
 
 export function DevicesTableToolbar<TData>({ table, totalDevices }: DevicesTableToolbarProps<TData>) {
-  const isAuthFilter = table.getColumn("status")?.getFilterValue();
+  const isAuthFilter = table.getColumn("is_authenticated")?.getFilterValue();
   const currentTab = isAuthFilter === true ? "Active" : isAuthFilter === false ? "Offline" : "All";
+
   const handleTabChange = (value: string) => {
     if (value === "All") {
-      table.getColumn("status")?.setFilterValue(undefined);
+      table.getColumn("is_authenticated")?.setFilterValue(undefined);
     } else if (value === "Active") {
-      table.getColumn("status")?.setFilterValue(true);
+      table.getColumn("is_authenticated")?.setFilterValue(true);
     } else if (value === "Offline") {
-      table.getColumn("status")?.setFilterValue(false);
+      table.getColumn("is_authenticated")?.setFilterValue(false);
     }
   };
 
