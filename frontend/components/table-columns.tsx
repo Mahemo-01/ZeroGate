@@ -160,7 +160,11 @@ export const getColumns = (handleAction: (mac: string, action: 'revoke' | 'block
   },
   {
     id: "is_authenticated",
-    accessorFn: (row) => row.is_authenticated,
+    accessorFn: (row) => {
+      if (!row.expiration_time) return false;
+      const isExpired = new Date(row.expiration_time) < new Date();
+      return row.is_authenticated && !isExpired;
+    },
     header: "Status",
     cell: ({ row }) => {
       const device = row.original;
